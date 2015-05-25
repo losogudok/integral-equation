@@ -4,17 +4,29 @@
 	var lower = rand(-11, 0);
 	var num = 4; 
 	var text;
+	var promiseLoad = new Promise(init);
+	var QUEUE;
 	var proto;
 
-	function init() {
+	function init(resolve, reject) {
 		var script = document.createElement('script');
 		script.src = source;
-		script.onload = onLoad;
+
+		script.onload = function(){
+			MathJax.Hub.Config({
+			  	tex2jax: {
+			    	inlineMath: [ ['$','$'], ['\\(','\\)'] ]
+			  	}
+			});
+			QUEUE = MathJax.Hub.queue;  // shorthand for the queue
+			resolve();
+		};
+
+		script.onerror = function() {
+			reject();
+		};
+
 		document.head.appendChild(script);
-	}
-
-	function onLoad() {
-
 	}
 
 	function rand(lower, upper) {
@@ -56,20 +68,24 @@
 		return text;
 	}
 
-	function createPreview() {
-
-	}
-
 	proto = Object.create(HTMLElement.prototype);
 
 	proto.createdCallback = function() {
+		var self = this;
+
+		promiseLoad.then(function(){
+			self.drawEquation();
+		});
+	};
+
+	proto.drawEquation = function() {
+		var self = this;
 		var text = generateEquation();
 		var buffer = document.createElement('div');
 
-		this.innerHTML = text;
-		MathJax.Hub.Typeset(this, function(){
-			console.log('done');
-		});
+		self.innerHTML = text;
+		// MathJax.Hub.Queue(['Typeset', MathJax.Hub, this]);
+		MathJax.Hub.Typeset(this);
 	};
 
 	document.registerElement('integral-equation', {
