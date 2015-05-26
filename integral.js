@@ -3,7 +3,6 @@
 	var upper = rand(0, 11);
 	var lower = rand(-11, 0);
 	var num = 4; 
-	var text;
 	var promiseLoad = new Promise(init);
 	var QUEUE;
 	var proto;
@@ -33,8 +32,10 @@
 		return Math.floor(Math.random() * (upper - lower) + lower);
 	}
 
-	function generateEquation() {
-		text = '$\\int\\limits_{'+ lower + '}^{' + upper + '}';
+	function generateEquationInLateX() {
+		var answer;
+		var text = '$\\int\\limits_{'+ lower + '}^{' + upper + '}';
+
 
 		for(var i = 0; i < num; i++){
 		  	var k = rand(1, 6); // Коэффициент перед x
@@ -60,32 +61,45 @@
 		  	if(sign === 1) {
 		  		k = -k;
 		  	}
-		  var answer = (k * Math.pow(upper, p + 1) / (p + 1)) - (k * Math.pow(lower, p + 1) / (p + 1));
+		  	answer += (k * Math.pow(upper, p + 1) / (p + 1)) - (k * Math.pow(lower, p + 1)/(p + 1));
 		  // И заодно считаем ответ.
 		}
 		text +="dx$";
 
-		return text;
+		return {
+			text: text,
+			answer: answer
+		};
+	}
+
+	function drawEquation(element) {
+		element.buffer.innerHTML = element.text;
+		MathJax.Hub.Queue(['Typeset', MathJax.Hub, element.buffer], function(){
+			swapBuffer(element);
+		});
+	}
+
+	function swapBuffer(element) {
+		element.innerHTML = element.buffer.innerHTML;
 	}
 
 	proto = Object.create(HTMLElement.prototype);
 
 	proto.createdCallback = function() {
 		var self = this;
+		self.text = '';
+		self.buffer = document.createElement('div');
 
-		promiseLoad.then(function(){
-			self.drawEquation();
-		});
+		promiseLoad.then(self.createEquation.bind(self));
 	};
 
-	proto.drawEquation = function() {
+	proto.createEquation = function() {
 		var self = this;
-		var text = generateEquation();
-		var buffer = document.createElement('div');
+		var equation = generateEquationInLateX();
 
-		self.innerHTML = text;
-		// MathJax.Hub.Queue(['Typeset', MathJax.Hub, this]);
-		MathJax.Hub.Typeset(this);
+		self.text = equation.text;
+		self.answer = equation.answer;
+		drawEquation(self);
 	};
 
 	document.registerElement('integral-equation', {
